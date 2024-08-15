@@ -1,0 +1,8 @@
+(test
+ (name test_types)
+ (libraries alcotest gplc yaml))
+
+
+
+
+(env (dev (flags (:standard -warn-error -A))))

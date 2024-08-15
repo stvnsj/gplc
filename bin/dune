@@ -1,0 +1,7 @@
+(executable
+ (public_name gplc)
+ (name main)
+ (libraries gplc))
+
+(env (dev
+	(flags (:standard -warn-error -A))))
