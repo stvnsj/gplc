@@ -1,6 +1,10 @@
 (test
  (name test_types)
- (libraries alcotest gplc yaml))
+ (libraries alcotest gplc))
+
+(test
+ (name test_consistency)
+ (libraries alcotest gplc))
 
 
 
