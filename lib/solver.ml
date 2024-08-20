@@ -15,55 +15,208 @@ open Z3.Arithmetic.Real
 open Z3.BitVector
 open Z3.FloatingPoint
 
+open Matrix
+
 exception TestFailedException of string
+
+
+
+(* Takes a list of expressions and produces an addition *)
+let addition (ctx : context) (es : Expr.expr list) =
+  (Arithmetic.mk_add ctx es)
+
+
+(* make_const_list : context -> int -> sort -> expr list
+   Returns a list of size members *)
+let rec make_const_list (ctx : context) (size : int) (sort : Sort.sort) =
+  match size with
+  | 0 -> []
+  | _ -> (mk_fresh_const ctx "x" sort) :: (make_const_list ctx (size - 1) sort)
+
+
+(* Returns a rows x cols matrix of constants *)
+let rec make_const_matrix
+          (ctx : context)
+          (rows : int)
+          (cols : int)
+          (sort : Sort.sort) : Expr.expr matrix =
+  match rows with
+  | 0 -> []
+  | _ -> (make_const_list ctx cols sort)
+         :: (make_const_matrix ctx (rows - 1) cols sort)
+
+
+
+  
+ 
+
+let rec make_equation (ctx : context) (lh : Expr.expr) (rh : Expr.expr) =
+  (Boolean.mk_eq ctx lh rh)
+
+(* Make a real number from an integer *)
+let mk_num_i (ctx : context) (i : int) = Arithmetic.Real.mk_numeral_i ctx i
+
+(* Make a real number from an string *)
+let mk_num_s (ctx : context) (s : string) = (Arithmetic.Real.mk_numeral_s ctx s)
+
+let one  (ctx : context) = (Arithmetic.Real.mk_numeral_i ctx 1)
+let zero (ctx : context) = (Arithmetic.Real.mk_numeral_i ctx 0)
+
+let unit_constraint (ctx : context) (e : Expr.expr) : Expr.expr =
+  let c1 = (Arithmetic.mk_le ctx (zero ctx) e) in
+  let c2 = (Arithmetic.mk_ge ctx (one ctx) e)  in
+  (Boolean.mk_and ctx [c1 ; c2])
+
+let null_constraint (ctx : context) (e : Expr.expr) : Expr.expr =
+  (Boolean.mk_eq ctx (zero ctx) e)
+
+
+let constraint_generator (c : context) (b : bool) (e : Expr.expr) =
+  match b with
+  | false -> (null_constraint c e)
+  | true  -> (unit_constraint c e)
+
+let constraint_matrix (c : context) (bm : bool matrix) (em : Expr.expr matrix) : Expr.expr matrix =
+  List.map2 (List.map2 (constraint_generator c)) bm em
+
+
+
+
+(*
+  `bin_matrix` is a matrix containing values {true,false}. It is to
+  be mapped to a matrix of constraint and apply it to the computed coupling
+ *)
+let solve_coupling (pi : string list) (qj : string list) (bin_matrix : 'a matrix) =
+
+   
+  let cfg = [("model", "true"); ("proof", "false")] in
+  let ctx = (mk_context cfg) in
+
+  let real_sort = (Arithmetic.Real.mk_sort ctx) in
+
+  let solver = (mk_solver ctx None) in
+
+  let p_size = List.length pi in
+  let q_size = List.length qj in
+
+  
+  let n_list = List.map (mk_num_s ctx) pi in
+  let m_list = List.map (mk_num_s ctx) qj in
+
+  let matrix1  = (make_const_matrix ctx p_size q_size real_sort) in
+  let matrix2  = transpose matrix1 in
+
+  (* Constraint matrix *)
+  let c_matrix = constraint_matrix ctx bin_matrix
+                   matrix1 in
+
+  let add1 = List.map (addition ctx) matrix1 in
+  let add2 = List.map (addition ctx) matrix2 in
+
+  let eq1  = List.map2 (make_equation ctx) n_list add1 in
+  let eq2  = List.map2 (make_equation ctx) m_list add2 in
+  
+  Solver.add solver (eq1 @ eq2 @ (List.flatten c_matrix)) ;
+
+  match Solver.check solver [] with
+  | SATISFIABLE ->
+
+     let model = Option.get (Solver.get_model solver) in
+     
+     let solution_matrix = matrix_to_string  matrix1   (fun x -> Model.eval model x true |> Option.get |> Arithmetic.Real.numeral_to_string) in
+
+     Printf.printf
+       "\n\n model = %s\n\n\n\nSolution Matrix = \n\n%s\n\n"
+       (Model.to_string model) solution_matrix
+
+  | _ -> Printf.printf "\n\nSystem has no solution\n\n"
+                                                        
+
+
+  
 
 
 
 let myfunction () =
   
-  	let cfg = [("model", "true"); ("proof", "false")] in
-	let ctx = (mk_context cfg) in
+  let cfg = [("model", "true"); ("proof", "false")] in
+  let ctx = (mk_context cfg) in
+  let real_sort = (Arithmetic.Real.mk_sort ctx) in
 
-        let x = (Arithmetic.Real.mk_const_s ctx "x" ) in   (* Create a double constant x *)
-        let y = (Arithmetic.Real.mk_const_s ctx "y" ) in   (* Create a double constant y *)
-        let z = (Arithmetic.Real.mk_const_s ctx "z" ) in   (* Create a double constant z *)
-        
-        let w = (Arithmetic.mk_add ctx [x; y; z])  in        (* Sum of three constants x + y + z *)
-        let n = (Arithmetic.Real.mk_numeral_i ctx 96) in
-        let c = (Boolean.mk_eq ctx n w ) in                  (* Create equality  n = x + y + z *)
+  let constants = (make_const_list ctx 20 real_sort) in
 
-        let lower_bound = (Arithmetic.Real.mk_numeral_i ctx 1) in   (* lower_bound real number *)
-        let upper_bound = (Arithmetic.Real.mk_numeral_i ctx 50) in   (* lower_bound real number *)
+  let x = (mk_fresh_const ctx "x" real_sort) in
+  let y = x in
 
-        let c1   = (Arithmetic.mk_gt ctx x lower_bound) in          (* list of constraints *)
-        let c2   = (Arithmetic.mk_gt ctx y lower_bound) in
-        let c3   = (Arithmetic.mk_gt ctx z lower_bound) in
+  
+  let constants_sum = (addition ctx constants) in
+  
 
+  let n = (mk_num_i ctx 5) in
 
-        let c4   = (Arithmetic.mk_lt ctx x upper_bound) in          (* list of constraints *)
-        let c5   = (Arithmetic.mk_lt ctx y upper_bound) in
-        let c6   = (Arithmetic.mk_lt ctx z upper_bound) in
+  let equation =  (Boolean.mk_eq ctx n constants_sum) in  
 
-        
-        let c4   = (Boolean.mk_and ctx [c; c1; c2; c3; c4; c5; c6]) in
+  let lower_bound = (Arithmetic.Real.mk_numeral_i ctx 0) in    (* lower_bound real number *)
+  let upper_bound = (Arithmetic.Real.mk_numeral_i ctx 1) in   (* lower_bound real number *)
 
 
-        let solver = (mk_solver ctx None) in
-        
-        Solver.add solver [ c4 ] ;
 
-        match Solver.check solver [] with
-        | SATISFIABLE ->
-           Printf.printf "Test passed.\n" ;
-           let model = Option.get (Solver.get_model solver) in
-           let x_val = Model.eval model x true |> Option.get |> Arithmetic.Real.numeral_to_string in
-           let y_val = Model.eval model y true |> Option.get |> Arithmetic.Real.numeral_to_string in
-           let z_val = Model.eval model z true |> Option.get |> Arithmetic.Real.numeral_to_string in
-           Printf.printf
-             "\n\n--------------------------\n Solution: \nx = %s, \ny = %s \nz = %s\n\n-----------------------------\n"
-             x_val y_val z_val
-        | _ -> Printf.printf "ERROR";
 
-        Printf.printf "Hola mundo!\n";
-        
-	Gc.full_major ()
+  let add_interval_constraint  = fun constant ->
+    [(Arithmetic.mk_lt ctx constant upper_bound) ;
+     (Arithmetic.mk_gt ctx constant lower_bound)] in
+  
+  
+
+   
+
+  (**********)
+  (* SOLVER *)
+  (**********)
+  let solver = (mk_solver ctx None) in
+
+  
+  let n_list = List.map (mk_num_i ctx) [10; 20] in
+  let m_list = List.map (mk_num_i ctx) [15; 7; 8] in
+
+  let matrix1  = (make_const_matrix ctx 2 3 real_sort) in
+  let matrix2  = transpose matrix1 in
+
+  let add1 = List.map (addition ctx) matrix1 in
+  let add2 = List.map (addition ctx) matrix2 in
+
+  let eq1  = List.map2 (make_equation ctx) n_list add1 in
+  let eq2  = List.map2 (make_equation ctx) m_list add2 in
+
+ 
+  let constraint_list = List.flatten (List.map (List.map (Arithmetic.mk_le ctx lower_bound)) matrix1) in 
+
+  Solver.add solver (eq1 @ eq2 @ constraint_list) ;
+
+  match Solver.check solver [] with
+  | SATISFIABLE ->
+
+     let model = Option.get (Solver.get_model solver) in
+     
+     let solution_matrix = matrix_to_string  matrix1   (fun x -> Model.eval model x true |> Option.get |> Arithmetic.Real.numeral_to_string) in
+
+     Printf.printf
+       "\n\n model = %s\n\n\n\nSolution Matrix = \n\n%s\n\n"
+       (Model.to_string model) solution_matrix
+
+  | _ -> Printf.printf "\n\nSystem has no solution\n\n";
+         
+  (* Gc.full_major (); *)
+
+  (* match Solver.check solver [] with *)
+  (* | SATISFIABLE -> *)
+
+  (*    let model = Option.get (Solver.get_model solver) in *)
+  (*    let x_val = Model.eval model x true |> Option.get |> Arithmetic.Real.numeral_to_string in *)
+  (*    let y_val = Model.eval model y true |> Option.get |> Arithmetic.Real.numeral_to_string in *)
+  (*    let z_val = Model.eval model z true |> Option.get |> Arithmetic.Real.numeral_to_string in *)
+  (*    Printf.printf *)
+  (*      "\n\n---------------\nSolution: \nx = %s, \ny = %s, \nz = %s,\n model = %s\n---------------\n" *)
+  (*      x_val y_val z_val (Model.to_string model) *)
+
+  (* | _ -> Printf.printf "ERROR"; *)

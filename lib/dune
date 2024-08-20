@@ -1,6 +1,7 @@
 (library
- (name gplc)
- (libraries z3))
+ (name lib)
+ (modules matrix solver types parser ast typechecker)
+ (libraries z3 containers))
 
 
 

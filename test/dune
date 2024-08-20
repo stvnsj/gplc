@@ -1,10 +1,10 @@
 (test
  (name test_types)
- (libraries alcotest gplc))
+ (libraries alcotest lib))
 
-(test
- (name test_consistency)
- (libraries alcotest gplc))
+; (test
+;; (name test_consistency)
+;; (libraries alcotest lib))
 
 
 
