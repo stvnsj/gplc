@@ -17,15 +17,16 @@ open Printf
 
 
 let gdt1 = GDType (
-               [GTReal ; GTReal ; GTBool],
-               [(GProb 0.2) ; (GProb 0.2) ; (GProb 0.6)])
+               [GTReal ; GTBool ; GTBool],
+               [(GProb 0.2) ; (GProb 0.2) ; GProbDynamic])
 
 let gdt2 = GDType (
-               [GTReal ; GTBool ; GTReal],
-               [(GProb 0.3) ; (GProb 0.6) ; (GProb 0.1)])
+               [GTReal ; GTBool],
+               [GProbDynamic ; GProbDynamic])
 
-let lst1 = List.map (fun gdt -> let GProb f = gdt in (Float.to_string f)) (get_gdt_prob_list gdt1)
-let lst2 = List.map (fun gdt -> let GProb f = gdt in (Float.to_string f)) (get_gdt_prob_list gdt2)
+
+let lst1 = List.map pp_gprob (get_gdt_prob_list gdt1)
+let lst2 = List.map pp_gprob (get_gdt_prob_list gdt2)
 
 
 let m = (solve_coupling
@@ -53,4 +54,4 @@ let gprob_operation2 = op2_gprob ( *. ) gp1 gp2
 
 
 
-let () = printf "%s" type_string
+let () = printf "\n\n%s\n\n" type_string

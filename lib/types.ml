@@ -108,10 +108,14 @@ let get_gtd_typ_list (gdt : gdtype) =
 
     
 
+(**************************)
+(* PRETTY PRINT FUNCTIONS *)
+(**************************)
 
 
 (** [pp_gprob gp] returns string representation of [gp] *)
-let pp_gprob (gp : gprob) : string =
+let pp_gprob : gprob -> string =
+  fun gp -> 
   match gp with 
   | GProb p ->  Float.to_string p
   | GProbDynamic -> "?"

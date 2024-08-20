@@ -21,6 +21,8 @@ exception TestFailedException of string
 
 
 
+
+
 (* Takes a list of expressions and produces an addition *)
 let addition (ctx : context) (es : Expr.expr list) =
   (Arithmetic.mk_add ctx es)
@@ -33,6 +35,10 @@ let rec make_const_list (ctx : context) (size : int) (sort : Sort.sort) =
   | 0 -> []
   | _ -> (mk_fresh_const ctx "x" sort) :: (make_const_list ctx (size - 1) sort)
 
+let mk_gprob_expr (ctx : context) (sort : Sort.sort) (probability : string) : Expr.expr =
+  match probability with
+  | "?" -> (mk_fresh_const ctx "p" sort)
+  |  _  -> (Arithmetic.Real.mk_numeral_s ctx probability)
 
 (* Returns a rows x cols matrix of constants *)
 let rec make_const_matrix
@@ -99,9 +105,18 @@ let solve_coupling (pi : string list) (qj : string list) (bin_matrix : 'a matrix
   let p_size = List.length pi in
   let q_size = List.length qj in
 
+
+  (* Lists of gradual probabilities from the the two gdtypes *)
+  let n_list = List.map (mk_gprob_expr ctx real_sort) pi in
+  let m_list = List.map (mk_gprob_expr ctx real_sort) qj in
+
   
-  let n_list = List.map (mk_num_s ctx) pi in
-  let m_list = List.map (mk_num_s ctx) qj in
+  let con1 = (make_equation ctx (one ctx) (addition ctx n_list)) in
+  let con2 = (make_equation ctx (one ctx) (addition ctx m_list)) in
+
+
+
+  
 
   let matrix1  = (make_const_matrix ctx p_size q_size real_sort) in
   let matrix2  = transpose matrix1 in
@@ -116,7 +131,7 @@ let solve_coupling (pi : string list) (qj : string list) (bin_matrix : 'a matrix
   let eq1  = List.map2 (make_equation ctx) n_list add1 in
   let eq2  = List.map2 (make_equation ctx) m_list add2 in
   
-  Solver.add solver (eq1 @ eq2 @ (List.flatten c_matrix)) ;
+  Solver.add solver (eq1 @ eq2 @ (List.flatten c_matrix) @ [con1 ; con2]) ;
 
   match Solver.check solver [] with
   | SATISFIABLE ->
