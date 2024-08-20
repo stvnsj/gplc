@@ -18,7 +18,6 @@ let gdt2 = GDType (
                [GTReal       ; GTBool     ],
                [GProbDynamic ; (GProb 0.4)])
 
-
 let gdt3 = GDType (
                [GTReal      ; GTDynamic],
                [(GProb 0.2) ; (GProb 0.1)])

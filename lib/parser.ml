@@ -3,6 +3,7 @@ open Printf
 open CCSexp
 open List
 open Ast
+open Types
 
 
 
@@ -13,6 +14,12 @@ let rec parse (sexp : sexp) : expr =
   match sexp with
   | `Atom "true"  -> TmBool (true)
   | `Atom "false" -> TmBool (false)
+  | `Atom  n      -> TmNum  (Float.of_string n)
+  | `List[ `Atom "choice" ; `Atom gp ; e1 ; e2] ->
+     match gp with
+     | "?" ->  TmChoice (GProbDynamic, parse e1, parse e2 )
+     | _   ->  TmChoice (GProb (Float.of_string gp), parse e1, parse e2)
+    
   | _ -> failwith (sprintf "Parsing Error")
 
 

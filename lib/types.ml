@@ -65,6 +65,13 @@ let scale_gdtype : gprob -> gdtype -> gdtype =
   let GDType(gtlist, gplist) = gdt in
   let scaled_gplist = List.map (op2_gprob ( *. ) gp) gplist in
   GDType (gtlist , scaled_gplist)
+
+
+let gprob_comp : gprob -> gprob =
+  fun gp ->
+  match gp with
+  | GProbDynamic -> gp
+  | GProb p      -> GProb (1. -. p)
   
 
 
