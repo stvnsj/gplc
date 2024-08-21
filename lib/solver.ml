@@ -35,6 +35,7 @@ let rec make_const_list (ctx : context) (size : int) (sort : Sort.sort) =
   | 0 -> []
   | _ -> (mk_fresh_const ctx "x" sort) :: (make_const_list ctx (size - 1) sort)
 
+
 let mk_gprob_expr (ctx : context) (sort : Sort.sort) (probability : string) : Expr.expr =
   match probability with
   | "?" -> (mk_fresh_const ctx "p" sort)
@@ -71,6 +72,7 @@ let mk_num_s (ctx : context) (s : string) = (Arithmetic.Real.mk_numeral_s ctx s)
 (********************************)
 (* NUMERIC EXPRESSION FUNCTIONS *)
 (********************************)
+
 (** Returns an expression of 1 *)
 let one  (ctx : context) = (Arithmetic.Real.mk_numeral_i ctx 1)
 (** Returns an expression of 0 *)

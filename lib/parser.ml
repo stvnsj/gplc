@@ -1,4 +1,3 @@
-
 open Printf
 open CCSexp
 open List
@@ -6,7 +5,7 @@ open Ast
 open Types
 
 
-
+(** Parse a gradual type from [sexp] *)
 let parse_type : sexp -> gtype =
   fun sexp ->
   match sexp with
@@ -15,6 +14,8 @@ let parse_type : sexp -> gtype =
   | `Atom "?"    -> GTDynamic
   | _ -> failwith "parse_type ERROR"
 
+
+(** Parse a gradual probability from [sexp] *)
 let parse_prob : sexp -> gprob =
   fun sexp ->
   match sexp with
@@ -23,9 +24,7 @@ let parse_prob : sexp -> gprob =
   | _ -> failwith "parse_prob ERROR"
 
 
-
-
-
+(** Parse a gradual distribution type from [sexp] *)
 let rec parse_distribution_type : sexp -> gtype list * gprob list =
   fun sexp -> 
   match sexp with
@@ -36,54 +35,41 @@ let rec parse_distribution_type : sexp -> gtype list * gprob list =
      (gt :: gts , gp :: gps)
   | `List [] -> ([],[])
   | _ -> failwith "parse_distribution_type ERROR"
-  
 
 
-
-(*
-  Proceses program syntax and returns an AST
- *)
-let rec parse (sexp : sexp) : expr =
+(** [parse] takes a symbolic expression program [sexp] *)
+let rec parse : sexp -> expr =
+  fun sexp -> 
   match sexp with
     
-  | `Atom "true"  -> TmBool (true)
-  | `Atom "false" -> TmBool (false)
-  | `Atom  n      -> TmNum  (Float.of_string n)
-
-  (* Probabilitic Binary Choice Operation *)
-  | `List[ `Atom "choice" ; `Atom gp ; e1 ; e2] ->
+  | `Atom "true"  -> TmBool (true) (* boolean literal value *)
+  | `Atom "false" -> TmBool (false) (* boolean literal value *)
+  | `Atom  n      -> TmNum  (Float.of_string n) (* numeric literal value *)
+  | `List[ `Atom "choice" ; `Atom gp ; e1 ; e2] -> (* Probabilitic Binary Choice *)
      (match gp with
      | "?" ->  TmChoice (GProbDynamic, parse e1, parse e2 )
      | _   ->  TmChoice (GProb (Float.of_string gp), parse e1, parse e2))
-
-  | `List[ `Atom "::" ; e ; dt] ->
-     (match dt with
-      | `Atom s ->
-         let gt  = parse_type dt in
+  | `List[ `Atom "::" ; e ; t] -> (* Ascription *)
+     (match t with
+      | `Atom _ -> (* Gradual types Real, Bool, ? *)
+         let gt  = parse_type t in
          let gdt = GDType([gt],[(GProb 1.0)]) in
          TmAscr (parse e, gdt )
-      | `List l -> 
-         let (gtlst , gplst) = parse_distribution_type dt in
-         TmAscr (parse e, GDType (gtlst,gplst)))
-
-
-    
+      | `List _ -> (* Gradual distribution type *)
+         let (gtlst , gplst) = parse_distribution_type t in
+         TmAscr (parse e, GDType (gtlst,gplst)))    
   | _ -> failwith (sprintf "parse Error")
-
-  
-
 
 
 let sexp_from_file : string -> CCSexp.sexp =
  fun filename ->
-  match CCSexp.parse_file filename with
-  | Ok s -> s
-  | Error msg -> failwith (sprintf "Unable to parse file %s: %s" filename msg)
+ match CCSexp.parse_file filename with
+ | Ok s -> s
+ | Error msg -> failwith (sprintf "Unable to parse file %s: %s" filename msg)
 
 
-
-
-let sexp_from_string (src : string) : CCSexp.sexp =
+let sexp_from_string : string -> sexp =
+  fun src -> 
   match CCSexp.parse_string src with
   | Ok s -> s
   | Error msg -> failwith (sprintf "Unable to parse src %s: %s" src msg)

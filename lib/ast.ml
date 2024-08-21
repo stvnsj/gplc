@@ -2,8 +2,8 @@ open Types
 
 
 type expr =
-  | TmBool   of bool
-  | TmNum    of float
-  | TmChoice of gprob * expr * expr
-  | TmAscr   of expr * gdtype
+  | TmBool   of bool (* Boolean term *)
+  | TmNum    of float (* Numeric term *)
+  | TmChoice of gprob * expr * expr (* Probabilistic Binary Choice *)
+  | TmAscr   of expr * gdtype (* Ascription *)
 

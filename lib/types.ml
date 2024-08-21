@@ -9,22 +9,23 @@ exception MyException of string
 (* Gradual Types and Gradual Probability *)
 (*****************************************)
 
-(* Gradual Probability type. *)
+(** Gradual Probability type. *)
 type gprob =
-  | GProb of float
-  | GProbDynamic
+  | GProb of float (* Explicit probability *)
+  | GProbDynamic (* Dynamic Probability *)
 
 
-(* Gradual Type type *)
+(** Gradual Type type *)
 type gtype =
-  | GTReal
-  | GTBool
-  | GTDynamic
-  | GTFun of gtype * gdtype
+  | GTReal (* Real Number type *)
+  | GTBool (* Boolean Number type *)
+  | GTDynamic (* Dynamic type *)
+  | GTFun of gtype * gdtype (* Function type *)
 
 
-(* Gradual Distribution Type type *)
-and gdtype = GDType of (gtype list) * (gprob list)
+(** Gradual Distribution Type type *)
+and gdtype =
+  | GDType of (gtype list) * (gprob list)
 
 
 
@@ -32,11 +33,16 @@ and gdtype = GDType of (gtype list) * (gprob list)
 (* Formula Types and Symbolic Probability *)
 (******************************************)
 
-(* Symbolic Probability type *)
-type sprob  = FProb of float | TVar of float * int * int
+(** Symbolic Probability type *)
+type sprob  =
+  | FProb of float
+  | TVar of float * int * int
 
-(* Formula Simple Type type *)
-type fstype = FTReal | FTBool | FTDynamic
+(** Formula Simple Type type *)
+type fstype =
+  | FTReal
+  | FTBool
+  | FTDynamic
 
 
 
@@ -44,14 +50,12 @@ type fstype = FTReal | FTBool | FTDynamic
 (* PRETTY PRINT FUNCTIONS *)
 (**************************)
 
-
 (** [pp_gprob gp] returns string representation of [gp] *)
 let pp_gprob : gprob -> string =
   fun gp -> 
   match gp with 
   | GProb p ->  Float.to_string p
   | GProbDynamic -> "?"
-
 
 (** [pp_gtype gt] returns string representation of [gt] *)
 let rec pp_gtype (gt : gtype) : string =
@@ -114,13 +118,7 @@ let gprob_comp : gprob -> gprob =
   fun gp ->
   match gp with
   | GProbDynamic -> gp
-  | GProb p      -> GProb (1. -. p)
-
-
-
-
-
-
+  | GProb p -> GProb (1. -. p)
 
 let get_gdt_prob_list (gdt : gdtype) =
   let GDType (_ , ps) = gdt in
@@ -137,7 +135,7 @@ let get_gtd_typ_list (gdt : gdtype) =
 
 
 (**************************************)
-(* Gradual Types Consistency Function *)
+(* GRADUAL TYPES CONSISTENCY FUNCTION *)
 (**************************************)
 
 let rec gtype_consistency : gtype -> gtype -> bool =
@@ -153,6 +151,7 @@ let rec gtype_consistency : gtype -> gtype -> bool =
      cond1 && cond2
   | _ -> false
 
+(**  *)
 and gdtype_consistency : gdtype -> gdtype -> bool =
   fun gdt1 gdt2 ->
   let lst1 = List.map pp_gprob (get_gdt_prob_list gdt1) in 
@@ -160,17 +159,28 @@ and gdtype_consistency : gdtype -> gdtype -> bool =
   let cmatrix = consistency_matrix gdt1 gdt2 in
   solve_coupling lst1 lst2 cmatrix
 
+
+
+(** [consistency_matrix] computes with the consistency relation
+    between the types in two distribution types [gdt1], [gdt2].
+    For instance, the ditribution types (Bool, Real, ?) (?, Bool)
+    produce the matrix:
+
+    types | ?    |  Bool  |
+    -----------------------
+    Bool  | true |  true  |      Consistency Relation Matrix
+    Real  | true |  false |
+
+    This matrix is used to determine which elements of the computed
+    coupling must be null (since they cannot relate inconsistent types).
+ *)
 and consistency_matrix : gdtype -> gdtype -> bool matrix =
   fun gdt1 gdt2 -> 
   match gdt1 with
   | GDType ([] , []) -> []
   | GDType (t :: ts , _ :: ps) ->
-     (
-       let GDType (ttss, _) = gdt2 in
-       (List.map (gtype_consistency t) ttss) ::
-             (consistency_matrix (GDType (ts , ps)) gdt2)
-
-     )
+     let GDType (ttss, _) = gdt2 in
+     (List.map (gtype_consistency t) ttss) :: (consistency_matrix (GDType (ts , ps)) gdt2)
   | _ -> raise (MyException "ERROR")
 
 
