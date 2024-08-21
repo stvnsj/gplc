@@ -107,6 +107,10 @@ let add_gdtype : gdtype -> gdtype -> gdtype =
   GDType ( tl1 @ tl2 , pl1 @ pl2)
 
 
+(** [scale_gdtype] takes a gradual probability [gp] and a
+    gradual distribution type [gdt], and scales 
+    
+ *)
 let scale_gdtype : gprob -> gdtype -> gdtype =
   fun gp gdt ->
   let GDType(gtlist, gplist) = gdt in
@@ -114,17 +118,22 @@ let scale_gdtype : gprob -> gdtype -> gdtype =
   GDType (gtlist , scaled_gplist)
 
 
+(** [gprob_comp] takes a gradual probability [gp] and
+    returns its complement *)
 let gprob_comp : gprob -> gprob =
   fun gp ->
   match gp with
   | GProbDynamic -> gp
   | GProb p -> GProb (1. -. p)
 
-let get_gdt_prob_list (gdt : gdtype) =
+
+let get_gdt_prob_list : gdtype -> gprob list =
+  fun gdt -> 
   let GDType (_ , ps) = gdt in
   ps
 
-let get_gtd_typ_list (gdt : gdtype) =
+let get_gdt_typ_list : gdtype -> gtype list =
+  fun gdt -> 
   let GDType (ts , _) = gdt in
   ts
   
@@ -138,6 +147,10 @@ let get_gtd_typ_list (gdt : gdtype) =
 (* GRADUAL TYPES CONSISTENCY FUNCTION *)
 (**************************************)
 
+(** [gtype_consistency] determines the consistency between gradual types
+    [gt1], [gt2]. Gradual types can be mu::=Real|Bool|?|mu->sigma (where
+    sigma is a gradual distribution type). 
+ *)
 let rec gtype_consistency : gtype -> gtype -> bool =
   fun gt1 gt2 -> 
   match (gt1 , gt2) with
@@ -145,19 +158,25 @@ let rec gtype_consistency : gtype -> gtype -> bool =
     | (_ , GTDynamic) 
     | (GTReal, GTReal)
     | (GTBool, GTBool) -> true
+  (* gt1 and gt2 are consistent iff t1~t2 and dt1~dt2 *)
   | (GTFun(t1 , dt1), GTFun(t2, dt2)) ->
      let cond1 = gtype_consistency t1 t2 in
      let cond2 = gdtype_consistency dt1 dt2 in
      cond1 && cond2
   | _ -> false
 
-(**  *)
+
+(** [gdtype_consistency] judges the consistency between gradual
+    distribution types [gdt1], [gdt2]. Two lists with the gradual
+    probabilities of these types, and their consistency matrix are
+    used to determine their consistency. 
+ *)
 and gdtype_consistency : gdtype -> gdtype -> bool =
   fun gdt1 gdt2 ->
-  let lst1 = List.map pp_gprob (get_gdt_prob_list gdt1) in 
-  let lst2 = List.map pp_gprob (get_gdt_prob_list gdt2) in
+  let gplst1 = List.map pp_gprob (get_gdt_prob_list gdt1) in 
+  let gplst2 = List.map pp_gprob (get_gdt_prob_list gdt2) in
   let cmatrix = consistency_matrix gdt1 gdt2 in
-  solve_coupling lst1 lst2 cmatrix
+  solve_coupling gplst1 gplst2 cmatrix
 
 
 
