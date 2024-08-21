@@ -14,7 +14,7 @@ open Z3.Arithmetic.Integer
 open Z3.Arithmetic.Real
 open Z3.BitVector
 open Z3.FloatingPoint
-
+open Printf
 open Matrix
 
 exception TestFailedException of string
@@ -174,11 +174,15 @@ let solve_coupling (gpl1 : string list) (gpl2 : string list) (bin_matrix : 'a ma
                              matrix1
                              (fun x -> Model.eval model x true |> Option.get |> Arithmetic.Real.numeral_to_string) in
 
-     Printf.printf
-       "\n\n model = %s\n\n\n\nSolution Matrix = \n\n%s\n\n"
-       (Model.to_string model) solution_matrix
+     (* Printf.printf *)
+     (*   "\n\n model = %s\n\n\n\nSolution Matrix = \n\n%s\n\n" *)
+     (*   (Model.to_string model) solution_matrix *)
+     printf "\nCoupling:\n============\n%s\n" solution_matrix;
+     true
 
-  | _ -> Printf.printf "\n\nSystem has no solution\n\n"
+  | _ ->
+     Printf.printf "\n\nSystem has no solution\n\n";
+     false
                                                         
 
 

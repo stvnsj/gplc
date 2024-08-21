@@ -20,5 +20,11 @@ let rec typecheck : expr -> gdtype =
      let scale2 = scale_gdtype comp gdt2 in (* (1-p) . t2 *)
      add_gdtype scale1 scale2 (* p . t1 + (1-p) . t2 *)
 
+  | TmAscr (term,typ) ->
+     let typ0 = typecheck term in
+     let consistent = gdtype_consistency typ0 typ in 
+     if consistent then typ0
+     else failwith "Inconsistent types"
+
 
   | _ -> failwith (sprintf "Type Error!")
