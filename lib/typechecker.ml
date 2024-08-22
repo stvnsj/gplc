@@ -4,6 +4,16 @@ open Types
 open Ast
 open Printf
 
+
+(** Sub-typechecker in charge of gradual simple types ascriptions *)
+let typecheck_gradual_type : expr -> gtype option =
+  fun e ->
+  match e with
+  | TmBool _ -> Some GTBool
+  | TmNum  _ -> Some GTReal
+  | _        -> None
+
+
 let rec typecheck : expr -> gdtype =
   fun e -> 
   match e with
@@ -22,10 +32,24 @@ let rec typecheck : expr -> gdtype =
      let scale2 = scale_gdtype comp gdt2 in (* (1-p) . t2 *)
      add_gdtype scale1 scale2 (* p . t1 + (1-p) . t2 *)
 
-  | TmAscr (term,typ) ->
+  | TmAscr1 (term,typ) ->
+     (match (typecheck_gradual_type term) with
+      | Some GTReal ->
+         let consistent = gtype_consistency GTReal typ in
+         if consistent then GDType([typ],[(GProb 1.0)])
+         else failwith "Inconsistent Types"
+         
+      | Some GTBool ->
+         let consistent = gtype_consistency GTBool typ in
+         if consistent then GDType([typ],[(GProb 1.0)])
+         else failwith "Inconsistent Types"
+         
+      | None -> failwith "Inconsistent types")
+     
+  | TmAscr2 (term,typ) ->
      let typ0 = typecheck term in (* Type of term *)
      let consistent = gdtype_consistency typ0 typ in 
-     if consistent then typ0
+     if consistent then typ
      else failwith "Inconsistent types"
 
 

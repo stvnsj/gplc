@@ -179,7 +179,7 @@ let solve_coupling (gpl1 : string list) (gpl2 : string list) (bin_matrix : 'a ma
      (* Printf.printf *)
      (*   "\n\n model = %s\n\n\n\nSolution Matrix = \n\n%s\n\n" *)
      (*   (Model.to_string model) solution_matrix *)
-     printf "\nCoupling:\n============\n%s\n" solution_matrix;
+     printf "\nCoupling:\n---------%s\n" solution_matrix;
      true
 
   | _ ->

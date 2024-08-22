@@ -45,19 +45,24 @@ let rec parse : sexp -> expr =
   | `Atom "true"  -> TmBool (true) (* boolean literal value *)
   | `Atom "false" -> TmBool (false) (* boolean literal value *)
   | `Atom  n      -> TmNum  (Float.of_string n) (* numeric literal value *)
+
   | `List[ `Atom "choice" ; `Atom gp ; e1 ; e2] -> (* Probabilitic Binary Choice *)
      (match gp with
      | "?" ->  TmChoice (GProbDynamic, parse e1, parse e2 )
-     | _   ->  TmChoice (GProb (Float.of_string gp), parse e1, parse e2))
+     | _   ->
+        let r = Float.of_string gp in
+        if r >= 0. && r <= 1.
+        then TmChoice (GProb r, parse e1, parse e2)
+        else failwith "Probability must be in interval [0,1]")
+
   | `List[ `Atom "::" ; e ; t] -> (* Ascription *)
      (match t with
       | `Atom _ -> (* Gradual types Real, Bool, ? *)
          let gt  = parse_type t in
-         let gdt = GDType([gt],[(GProb 1.0)]) in
-         TmAscr (parse e, gdt )
+         TmAscr1 (parse e, gt )
       | `List _ -> (* Gradual distribution type *)
          let (gtlst , gplst) = parse_distribution_type t in
-         TmAscr (parse e, GDType (gtlst,gplst)))    
+         TmAscr2 (parse e, GDType (gtlst,gplst)))    
   | _ -> failwith (sprintf "parse Error")
 
 
