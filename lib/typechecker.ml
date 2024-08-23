@@ -6,12 +6,17 @@ open Printf
 
 
 (** Sub-typechecker in charge of gradual simple types ascriptions *)
-let typecheck_gradual_type : expr -> gtype option =
+let rec typecheck_gradual_type : expr -> gtype option =
   fun e ->
   match e with
   | TmBool _ -> Some GTBool
-  | TmNum  _ -> Some GTReal
-  | _        -> None
+  | TmNum _ -> Some GTReal
+  | TmAscr1 (term, typ) ->
+     (match (typecheck_gradual_type term) with
+      | Some t -> if (gtype_consistency t typ) then Some typ else failwith "ERROR"
+      | None -> failwith "No a simple type")
+  | _ -> None 
+
 
 
 let rec typecheck : expr -> gdtype =
